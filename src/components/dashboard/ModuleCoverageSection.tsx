@@ -31,10 +31,11 @@ import {
 interface ModuleData {
   name: string;
   totalCases: number;
-  executedCases: number;
-  passedCases: number;
-  failedCases: number;
-  blockedCases: number;
+  positiveCases: number;
+  negativeCases: number;
+  edgeCases: number;
+  integrationCases: number;
+  totalCovered: number;
   coveragePercentage: number;
 }
 
@@ -52,7 +53,7 @@ const ModuleCoverageSection = ({ data }: ModuleCoverageSectionProps) => {
 
   const chartConfig = {
     coveragePercentage: { label: "Coverage %", color: "hsl(var(--primary))" },
-    executedCases: { label: "Executed", color: "hsl(var(--chart-1))" },
+    coveredCases: { label: "Executed", color: "hsl(var(--chart-1))" },
     totalCases: { label: "Total", color: "hsl(var(--chart-4))" },
   };
 
@@ -203,12 +204,12 @@ const ModuleCoverageSection = ({ data }: ModuleCoverageSectionProps) => {
 
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="text-center">
-                      <p className="font-semibold">{module.executedCases}</p>
-                      <p className="text-muted-foreground">Executed</p>
-                    </div>
-                    <div className="text-center">
                       <p className="font-semibold">{module.totalCases}</p>
                       <p className="text-muted-foreground">Total</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-semibold">{module.totalcovered}</p>
+                      <p className="text-muted-foreground">Covered</p>
                     </div>
                   </div>
 
@@ -218,23 +219,30 @@ const ModuleCoverageSection = ({ data }: ModuleCoverageSectionProps) => {
                         <div className="text-center">
                           <div className="flex items-center justify-center gap-1 mb-1">
                             <CheckCircle className="h-3 w-3 text-emerald-600" />
-                            <span className="font-medium">Passed</span>
+                            <span className="font-medium">Positive Cases</span>
                           </div>
-                          <p className="font-bold text-emerald-600">{module.passedCases}</p>
+                          <p className="font-bold text-emerald-600">{module.positiveCases}</p>
                         </div>
                         <div className="text-center">
                           <div className="flex items-center justify-center gap-1 mb-1">
                             <XCircle className="h-3 w-3 text-red-600" />
-                            <span className="font-medium">Failed</span>
+                            <span className="font-medium">Negative Cases</span>
                           </div>
-                          <p className="font-bold text-red-600">{module.failedCases}</p>
+                          <p className="font-bold text-red-600">{module.negativeCases}</p>
                         </div>
                         <div className="text-center">
                           <div className="flex items-center justify-center gap-1 mb-1">
                             <AlertCircle className="h-3 w-3 text-amber-600" />
-                            <span className="font-medium">Blocked</span>
+                            <span className="font-medium">Edge Cases</span>
                           </div>
-                          <p className="font-bold text-amber-600">{module.blockedCases}</p>
+                          <p className="font-bold text-amber-600">{module.edgeCases}</p>
+                        </div>
+                         <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 mb-1">
+                            <XCircle className="h-3 w-3 text-red-600" />
+                            <span className="font-medium">Integration Cases</span>
+                          </div>
+                          <p className="font-bold text-red-600">{module.integrationCases}</p>
                         </div>
                       </div>
                     </div>
