@@ -2,9 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Chart color definitions for QA Dashboard */
+@layer base {
+  :root {
+    --chart-1: 142 76% 36%;  /* Green for passed tests */
+    --chart-2: 0 84% 60%;    /* Red for failed tests */
+    --chart-3: 45 93% 47%;   /* Orange for blocked tests */
+    --chart-4: 215 28% 70%;  /* Gray for not executed */
+    --chart-5: 262 83% 58%;  /* Purple for additional metrics */
+  }
+
+  .dark {
+    --chart-1: 142 70% 45%;
+    --chart-2: 0 72% 51%;
+    --chart-3: 45 93% 47%;
+    --chart-4: 215 28% 60%;
+    --chart-5: 262 83% 70%;
+  }
+}
 
 @layer base {
   :root {
