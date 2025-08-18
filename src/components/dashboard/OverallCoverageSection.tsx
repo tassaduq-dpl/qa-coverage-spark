@@ -17,12 +17,13 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 
 interface OverallCoverageData {
+  totalModules: number;
   totalCases: number;
-  executedCases: number;
-  passedCases: number;
-  failedCases: number;
-  blockedCases: number;
-  notExecutedCases: number;
+  positiveCases: number;
+  negativeCases: number;
+  edgeCases: number;
+  integrationCases: number;
+  coveredCases: number;
   coveragePercentage: number;
 }
 
@@ -32,10 +33,10 @@ interface OverallCoverageSectionProps {
 
 const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
   const pieData = [
-    { name: "Passed", value: data.passedCases, color: "hsl(var(--chart-1))" },
-    { name: "Failed", value: data.failedCases, color: "hsl(var(--chart-2))" },
-    { name: "Blocked", value: data.blockedCases, color: "hsl(var(--chart-3))" },
-    { name: "Not Executed", value: data.notExecutedCases, color: "hsl(var(--chart-4))" },
+    { name: "Positive", value: data.positiveCases, color: "hsl(var(--chart-1))" },
+    { name: "Negative", value: data.negativeCases, color: "hsl(var(--chart-2))" },
+    { name: "Edge", value: data.edgeCases, color: "hsl(var(--chart-3))" },
+    { name: "Integration", value: data.integrationCases, color: "hsl(var(--chart-4))" },
   ];
 
   // Mock trend data for demonstration
@@ -47,10 +48,10 @@ const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
   ];
 
   const chartConfig = {
-    passed: { label: "Passed", color: "hsl(var(--chart-1))" },
-    failed: { label: "Failed", color: "hsl(var(--chart-2))" },
-    blocked: { label: "Blocked", color: "hsl(var(--chart-3))" },
-    notExecuted: { label: "Not Executed", color: "hsl(var(--chart-4))" },
+    positive : { label: "Positive Cases", color: "hsl(var(--chart-1))" },
+    negative : { label: "Negative Cases", color: "hsl(var(--chart-2))" },
+    edge : { label: "Edge Cases", color: "hsl(var(--chart-3))" },
+    integration: { label: "Integration Cases", color: "hsl(var(--chart-4))" },
   };
 
   const getStatusColor = (percentage: number) => {
@@ -73,6 +74,17 @@ const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Modules</p>
+                <p className="text-3xl font-bold">{data.totalModules.toLocaleString()}</p>
+              </div>
+              <BarChart3 className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-primary">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Test Cases</p>
                 <p className="text-3xl font-bold">{data.totalCases.toLocaleString()}</p>
               </div>
@@ -85,8 +97,8 @@ const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Executed Cases</p>
-                <p className="text-3xl font-bold text-emerald-600">{data.executedCases.toLocaleString()}</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Covered </p>
+                <p className="text-3xl font-bold text-emerald-600">{data.totalCovered.toLocaleString()}</p>
               </div>
               <CheckCircle className="h-8 w-8 text-emerald-500" />
             </div>
@@ -112,18 +124,6 @@ const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
             </div>
           </CardContent>
         </Card>
-
-        <Card className="border-l-4 border-l-red-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Pending Cases</p>
-                <p className="text-3xl font-bold text-red-600">{data.notExecutedCases.toLocaleString()}</p>
-              </div>
-              <Clock className="h-8 w-8 text-red-500" />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Charts Section */}
@@ -132,9 +132,9 @@ const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              Test Execution Breakdown
+              Test Cases Breakdown
               <Badge variant="secondary" className="ml-auto">
-                {data.executedCases} / {data.totalCases}
+                {data.totalCovered} / {data.totalCases}
               </Badge>
             </CardTitle>
           </CardHeader>
@@ -217,44 +217,44 @@ const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <CheckCircle className="h-5 w-5 text-emerald-600" />
-                <span className="font-semibold text-emerald-600">Passed</span>
+                <span className="font-semibold text-emerald-600">Positive</span>
               </div>
-              <p className="text-2xl font-bold">{data.passedCases}</p>
+              <p className="text-2xl font-bold">{data.positiveCases}</p>
               <p className="text-sm text-muted-foreground">
-                {((data.passedCases / data.totalCases) * 100).toFixed(1)}% of total
+                {((data.positiveCases / data.totalCovered) * 100).toFixed(1)}% of total covered
               </p>
             </div>
 
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <XCircle className="h-5 w-5 text-red-600" />
-                <span className="font-semibold text-red-600">Failed</span>
+                <span className="font-semibold text-red-600">Negative</span>
               </div>
-              <p className="text-2xl font-bold">{data.failedCases}</p>
+              <p className="text-2xl font-bold">{data.negativeCases}</p>
               <p className="text-sm text-muted-foreground">
-                {((data.failedCases / data.totalCases) * 100).toFixed(1)}% of total
+                {((data.negativeCases / data.totalCovered) * 100).toFixed(1)}% of total covered
               </p>
             </div>
 
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <AlertCircle className="h-5 w-5 text-amber-600" />
-                <span className="font-semibold text-amber-600">Blocked</span>
+                <span className="font-semibold text-amber-600">Edge</span>
               </div>
-              <p className="text-2xl font-bold">{data.blockedCases}</p>
+              <p className="text-2xl font-bold">{data.edgeCases}</p>
               <p className="text-sm text-muted-foreground">
-                {((data.blockedCases / data.totalCases) * 100).toFixed(1)}% of total
+                {((data.edgeCases / data.totalCovered) * 100).toFixed(1)}% of total of covered
               </p>
             </div>
 
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Clock className="h-5 w-5 text-slate-600" />
-                <span className="font-semibold text-slate-600">Not Executed</span>
+                <span className="font-semibold text-slate-600">Integration</span>
               </div>
-              <p className="text-2xl font-bold">{data.notExecutedCases}</p>
+              <p className="text-2xl font-bold">{data.integrationCases}</p>
               <p className="text-sm text-muted-foreground">
-                {((data.notExecutedCases / data.totalCases) * 100).toFixed(1)}% of total
+                {((data.integrationCases / data.totalCovered) * 100).toFixed(1)}% of total covered
               </p>
             </div>
           </div>
