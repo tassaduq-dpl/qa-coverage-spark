@@ -37,78 +37,127 @@ const Index = () => {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const extractSpreadsheetId = (url: string): string => {
+    const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+    if (!match) throw new Error("Invalid Google Sheets URL");
+    return match[1];
+  };
+
+  const fetchSheetData = async (spreadsheetId: string, range: string): Promise<any[][]> => {
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&range=${encodeURIComponent(range)}`;
+    
+    const response = await fetch(csvUrl);
+    if (!response.ok) {
+      throw new Error("Failed to fetch spreadsheet data. Make sure the sheet is publicly accessible.");
+    }
+    
+    const csvText = await response.text();
+    
+    // Parse CSV data
+    const rows = csvText.split('\n').map(row => {
+      const values: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let i = 0; i < row.length; i++) {
+        const char = row[i];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          values.push(current.replace(/^"|"$/g, ''));
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      
+      if (current) {
+        values.push(current.replace(/^"|"$/g, ''));
+      }
+      
+      return values;
+    }).filter(row => row.some(cell => cell.trim()));
+    
+    return rows;
+  };
+
+  const parseOverallData = (data: any[][]): DashboardData['overall'] => {
+    // Assuming the overall data is in a specific format
+    // Row 1: Headers, Row 2: Values
+    if (data.length < 2) throw new Error("Invalid overall data format");
+    
+    const values = data[1];
+    const totalCases = parseInt(values[0]) || 0;
+    const executedCases = parseInt(values[1]) || 0;
+    const passedCases = parseInt(values[2]) || 0;
+    const failedCases = parseInt(values[3]) || 0;
+    const blockedCases = parseInt(values[4]) || 0;
+    const notExecutedCases = parseInt(values[5]) || totalCases - executedCases;
+    
+    const coveragePercentage = totalCases > 0 ? (executedCases / totalCases) * 100 : 0;
+    
+    return {
+      totalCases,
+      executedCases,
+      passedCases,
+      failedCases,
+      blockedCases,
+      notExecutedCases,
+      coveragePercentage: Math.round(coveragePercentage * 10) / 10
+    };
+  };
+
+  const parseModuleData = (data: any[][]): DashboardData['modules'] => {
+    // Assuming first row contains headers, subsequent rows contain module data
+    if (data.length < 2) throw new Error("Invalid module data format");
+    
+    return data.slice(1).map(row => {
+      const name = row[0] || "Unknown Module";
+      const totalCases = parseInt(row[1]) || 0;
+      const executedCases = parseInt(row[2]) || 0;
+      const passedCases = parseInt(row[3]) || 0;
+      const failedCases = parseInt(row[4]) || 0;
+      const blockedCases = parseInt(row[5]) || 0;
+      
+      const coveragePercentage = totalCases > 0 ? (executedCases / totalCases) * 100 : 0;
+      
+      return {
+        name,
+        totalCases,
+        executedCases,
+        passedCases,
+        failedCases,
+        blockedCases,
+        coveragePercentage: Math.round(coveragePercentage * 10) / 10
+      };
+    }).filter(module => module.name && module.name !== "Unknown Module");
+  };
+
   const handleDataFetch = async (spreadsheetUrl: string, overallRange: string, moduleRange: string) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      // Simulate data processing - in real implementation, this would call Google Sheets API
-      // For now, we'll use mock data to demonstrate the dashboard
-      const mockData: DashboardData = {
-        overall: {
-          totalCases: 450,
-          executedCases: 380,
-          passedCases: 320,
-          failedCases: 35,
-          blockedCases: 25,
-          notExecutedCases: 70,
-          coveragePercentage: 84.4
-        },
-        modules: [
-          {
-            name: "Authentication",
-            totalCases: 85,
-            executedCases: 78,
-            passedCases: 70,
-            failedCases: 5,
-            blockedCases: 3,
-            coveragePercentage: 91.8
-          },
-          {
-            name: "User Management",
-            totalCases: 120,
-            executedCases: 95,
-            passedCases: 85,
-            failedCases: 8,
-            blockedCases: 2,
-            coveragePercentage: 79.2
-          },
-          {
-            name: "Payment Processing",
-            totalCases: 95,
-            executedCases: 82,
-            passedCases: 75,
-            failedCases: 4,
-            blockedCases: 3,
-            coveragePercentage: 86.3
-          },
-          {
-            name: "Reporting",
-            totalCases: 75,
-            executedCases: 68,
-            passedCases: 60,
-            failedCases: 6,
-            blockedCases: 2,
-            coveragePercentage: 90.7
-          },
-          {
-            name: "API Integration",
-            totalCases: 75,
-            executedCases: 57,
-            passedCases: 50,
-            failedCases: 5,
-            blockedCases: 2,
-            coveragePercentage: 76.0
-          }
-        ]
-      };
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const spreadsheetId = extractSpreadsheetId(spreadsheetUrl);
       
-      setDashboardData(mockData);
-    } catch (err) {
-      setError("Failed to fetch data from spreadsheet. Please check your URL and ranges.");
+      // Fetch data from both ranges
+      const [overallData, moduleData] = await Promise.all([
+        fetchSheetData(spreadsheetId, overallRange),
+        fetchSheetData(spreadsheetId, moduleRange)
+      ]);
+      
+      // Parse the data
+      const overall = parseOverallData(overallData);
+      const modules = parseModuleData(moduleData);
+      
+      const dashboardData: DashboardData = {
+        overall,
+        modules
+      };
+      
+      setDashboardData(dashboardData);
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch data from spreadsheet. Please check your URL and ranges.");
     } finally {
       setIsLoading(false);
     }
@@ -139,7 +188,7 @@ const Index = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <SpreadsheetForm onSubmit={handleDataFetch} isLoading={isLoading} />
+              <SpreadsheetForm onSubmit={handleDataFetch} isLoading={isLoading} error={error} />
             </CardContent>
           </Card>
 

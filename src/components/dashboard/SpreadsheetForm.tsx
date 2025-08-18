@@ -9,9 +9,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 interface SpreadsheetFormProps {
   onSubmit: (spreadsheetUrl: string, overallRange: string, moduleRange: string) => void;
   isLoading: boolean;
+  error?: string | null;
 }
 
-const SpreadsheetForm = ({ onSubmit, isLoading }: SpreadsheetFormProps) => {
+const SpreadsheetForm = ({ onSubmit, isLoading, error }: SpreadsheetFormProps) => {
   const [spreadsheetUrl, setSpreadsheetUrl] = useState("");
   const [overallRange, setOverallRange] = useState("");
   const [moduleRange, setModuleRange] = useState("");
@@ -119,7 +120,14 @@ const SpreadsheetForm = ({ onSubmit, isLoading }: SpreadsheetFormProps) => {
           </div>
         </div>
 
-        <Button 
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <Button
           type="submit" 
           className="w-full" 
           size="lg"
