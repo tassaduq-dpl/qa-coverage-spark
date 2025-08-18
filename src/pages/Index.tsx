@@ -13,21 +13,23 @@ import ModuleCoverageSection from "@/components/dashboard/ModuleCoverageSection"
 
 interface DashboardData {
   overall: {
+    totalModules: number
     totalCases: number;
-    executedCases: number;
-    passedCases: number;
-    failedCases: number;
-    blockedCases: number;
-    notExecutedCases: number;
+    positiveCases: number;
+    negativeCases: number;
+    edgeCases: number;
+    integrationCases: number;
+    totalCovered: number;
     coveragePercentage: number;
   };
   modules: Array<{
     name: string;
     totalCases: number;
-    executedCases: number;
-    passedCases: number;
-    failedCases: number;
-    blockedCases: number;
+    positiveCases: number;
+    negativeCases: number;
+    edgeCases: number;
+    integrationCases: number;
+    totalCovered: number;
     coveragePercentage: number;
   }>;
 }
@@ -87,22 +89,23 @@ const Index = () => {
     if (data.length < 2) throw new Error("Invalid overall data format");
     
     const values = data[1];
-    const totalCases = parseInt(values[0]) || 0;
-    const executedCases = parseInt(values[1]) || 0;
-    const passedCases = parseInt(values[2]) || 0;
-    const failedCases = parseInt(values[3]) || 0;
-    const blockedCases = parseInt(values[4]) || 0;
-    const notExecutedCases = parseInt(values[5]) || totalCases - executedCases;
-    
-    const coveragePercentage = totalCases > 0 ? (executedCases / totalCases) * 100 : 0;
+    const totalModules = parseInt(values[0]) || 0;
+    const totalCases = parseInt(values[1]) || 0;
+    const positiveCases = parseInt(values[2]) || 0;
+    const negativeCases = parseInt(values[3]) || 0;
+    const edgeCases = parseInt(values[4]) || 0;
+    const integrationCases = parseInt(values[5]) || 0;
+    const totalCovered = parseInt(values[6]) || 0;
+    const coveragePercentage = totalCases > 0 ? (totalCovered / totalCases) * 100 : 0;
     
     return {
+      totalModules,
       totalCases,
-      executedCases,
-      passedCases,
-      failedCases,
-      blockedCases,
-      notExecutedCases,
+      positiveCases,
+      negativeCases,
+      edgeCases,
+      integrationCases,
+      totalCovered,
       coveragePercentage: Math.round(coveragePercentage * 10) / 10
     };
   };
@@ -113,21 +116,22 @@ const Index = () => {
     
     return data.slice(1).map(row => {
       const name = row[0] || "Unknown Module";
-      const totalCases = parseInt(row[1]) || 0;
-      const executedCases = parseInt(row[2]) || 0;
-      const passedCases = parseInt(row[3]) || 0;
-      const failedCases = parseInt(row[4]) || 0;
-      const blockedCases = parseInt(row[5]) || 0;
-      
-      const coveragePercentage = totalCases > 0 ? (executedCases / totalCases) * 100 : 0;
+      const totalCases = parseInt(values[1]) || 0;
+      const positiveCases = parseInt(values[2]) || 0;
+      const negativeCases = parseInt(values[3]) || 0;
+      const edgeCases = parseInt(values[4]) || 0;
+      const integrationCases = parseInt(values[5]) || 0;
+      const totalCovered = parseInt(values[6]) || 0;
+      const coveragePercentage = totalCases > 0 ? (totalCovered / totalCases) * 100 : 0;
       
       return {
         name,
         totalCases,
-        executedCases,
-        passedCases,
-        failedCases,
-        blockedCases,
+        positiveCases,
+        negativeCases,
+        edgeCases,
+        integrationCases,
+        totalCovered,
         coveragePercentage: Math.round(coveragePercentage * 10) / 10
       };
     }).filter(module => module.name && module.name !== "Unknown Module");
