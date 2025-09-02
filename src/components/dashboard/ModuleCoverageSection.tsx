@@ -53,7 +53,7 @@ const ModuleCoverageSection = ({ data }: ModuleCoverageSectionProps) => {
 
   const chartConfig = {
     coveragePercentage: { label: "Coverage %", color: "hsl(var(--primary))" },
-    coveredCases: { label: "Executed", color: "hsl(var(--chart-1))" },
+    totalCovered: { label: "Executed", color: "hsl(var(--chart-1))" },
     totalCases: { label: "Total", color: "hsl(var(--chart-4))" },
   };
 
@@ -208,7 +208,7 @@ const ModuleCoverageSection = ({ data }: ModuleCoverageSectionProps) => {
                       <p className="text-muted-foreground">Total</p>
                     </div>
                     <div className="text-center">
-                      <p className="font-semibold">{module.totalcovered}</p>
+                      <p className="font-semibold">{module.totalCovered}</p>
                       <p className="text-muted-foreground">Covered</p>
                     </div>
                   </div>

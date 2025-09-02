@@ -23,7 +23,7 @@ interface OverallCoverageData {
   negativeCases: number;
   edgeCases: number;
   integrationCases: number;
-  coveredCases: number;
+  totalCovered: number;
   coveragePercentage: number;
 }
 
@@ -103,7 +103,7 @@ const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
               <CheckCircle className="h-8 w-8 text-emerald-500" />
             </div>
             <div className="mt-2">
-              <Progress value={(data.executedCases / data.totalCases) * 100} className="h-2" />
+              <Progress value={(data.totalCovered / data.totalCases) * 100} className="h-2" />
             </div>
           </CardContent>
         </Card>
