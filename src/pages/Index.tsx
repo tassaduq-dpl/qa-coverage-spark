@@ -1,13 +1,10 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { BarChart3, PieChart, TrendingUp, FileSpreadsheet } from "lucide-react";
-import SpreadsheetForm from "@/components/dashboard/SpreadsheetForm";
+import { BarChart3, PieChart, TrendingUp, Database, Download, Loader2 } from "lucide-react";
+import ConnectionForm from "@/components/dashboard/SpreadsheetForm";
 import OverallCoverageSection from "@/components/dashboard/OverallCoverageSection";
 import ModuleCoverageSection from "@/components/dashboard/ModuleCoverageSection";
 
@@ -34,136 +31,158 @@ interface DashboardData {
   }>;
 }
 
+interface RTMReportData {
+  // Add interface for RTM report data structure based on your API response
+  [key: string]: any;
+}
+
+interface ReportParams {
+  storyIds?: string;
+  sprintName?: string;
+  connectionId: string;
+}
+
+const VITE_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [rtmData, setRtmData] = useState<RTMReportData | null>(null);
+  const [reportParams, setReportParams] = useState<ReportParams | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const extractSpreadsheetId = (url: string): string => {
-    const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-    if (!match) throw new Error("Invalid Google Sheets URL");
-    return match[1];
-  };
+  // Transform RTM data to dashboard format
+  const transformRTMToDashboard = (rtmData: RTMReportData): DashboardData => {
+    const { overallCoverage, moduleWiseCoverage } = rtmData;
+    
+    const overall = {
+      totalModules: overallCoverage.totalModules,
+      totalCases: overallCoverage.totalUseCases,
+      positiveCases: overallCoverage.testCasesByType.positive,
+      negativeCases: overallCoverage.testCasesByType.negative,
+      edgeCases: overallCoverage.testCasesByType.edgeCases,
+      integrationCases: overallCoverage.testCasesByType.integration,
+      totalCovered: overallCoverage.coverage.totalCovered,
+      coveragePercentage: overallCoverage.coverage.coveragePercentage
+    };
 
-  const fetchSheetData = async (spreadsheetId: string, range: string): Promise<any[][]> => {
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&range=${encodeURIComponent(range)}`;
-    
-    const response = await fetch(csvUrl);
-    if (!response.ok) {
-      throw new Error("Failed to fetch spreadsheet data. Make sure the sheet is publicly accessible.");
-    }
-    
-    const csvText = await response.text();
-    
-    // Parse CSV data
-    const rows = csvText.split('\n').map(row => {
-      const values: string[] = [];
-      let current = '';
-      let inQuotes = false;
-      
-      for (let i = 0; i < row.length; i++) {
-        const char = row[i];
-        if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-          values.push(current.replace(/^"|"$/g, ''));
-          current = '';
-        } else {
-          current += char;
-        }
-      }
-      
-      if (current) {
-        values.push(current.replace(/^"|"$/g, ''));
-      }
-      
-      return values;
-    }).filter(row => row.some(cell => cell.trim()));
-    
-    return rows;
-  };
+    const modules = moduleWiseCoverage.map((module: any) => ({
+      name: module.feature,
+      totalCases: module.totalUseCases,
+      positiveCases: module.positiveCovered,
+      negativeCases: module.negativeCovered,
+      edgeCases: module.edgeCasesCovered,
+      integrationCases: module.integrationCovered,
+      totalCovered: module.totalCovered,
+      coveragePercentage: module.coveragePercentage,
+    }))
 
-  const parseOverallData = (data: any[][]): DashboardData['overall'] => {
-    // Assuming the overall data is in a specific format
-    // Row 1: Headers, Row 2: Values
-    if (data.length < 2) throw new Error("Invalid overall data format");
-    
-    const values = data[1];
-    const totalModules = parseInt(values[0]) || 0;
-    const totalCases = parseInt(values[1]) || 0;
-    const positiveCases = parseInt(values[2]) || 0;
-    const negativeCases = parseInt(values[3]) || 0;
-    const edgeCases = parseInt(values[4]) || 0;
-    const integrationCases = parseInt(values[5]) || 0;
-    const totalCovered = parseInt(values[6]) || 0;
-    const coveragePercentage = totalCases > 0 ? (totalCovered / totalCases) * 100 : 0;
-    
     return {
-      totalModules,
-      totalCases,
-      positiveCases,
-      negativeCases,
-      edgeCases,
-      integrationCases,
-      totalCovered,
-      coveragePercentage: Math.round(coveragePercentage * 10) / 10
+      overall,
+      modules
     };
   };
 
-  const parseModuleData = (data: any[][]): DashboardData['modules'] => {
-    // Assuming first row contains headers, subsequent rows contain module data
-    if (data.length < 2) throw new Error("Invalid module data format");
-    
-    return data.slice(1).map(row => {
-      const name = row[0] || "Unknown Module";
-      const totalCases = parseInt(row[1]) || 0;
-      const positiveCases = parseInt(row[2]) || 0;
-      const negativeCases = parseInt(row[3]) || 0;
-      const edgeCases = parseInt(row[4]) || 0;
-      const integrationCases = parseInt(row[5]) || 0;
-      const totalCovered = parseInt(row[6]) || 0;
-      const coveragePercentage = totalCases > 0 ? (totalCovered / totalCases) * 100 : 0;
-      
-      return {
-        name,
-        totalCases,
-        positiveCases,
-        negativeCases,
-        edgeCases,
-        integrationCases,
-        totalCovered,
-        coveragePercentage: Math.round(coveragePercentage * 10) / 10
-      };
-    }).filter(module => module.name && module.name !== "Unknown Module");
-  };
-
-  const handleDataFetch = async (spreadsheetUrl: string, overallRange: string, moduleRange: string) => {
+  const handleRTMGeneration = async (data: ReportParams) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const spreadsheetId = extractSpreadsheetId(spreadsheetUrl);
+      // Store the parameters for later use in download
+      setReportParams(data);
       
-      // Fetch data from both ranges
-      const [overallData, moduleData] = await Promise.all([
-        fetchSheetData(spreadsheetId, overallRange),
-        fetchSheetData(spreadsheetId, moduleRange)
-      ]);
+      // Build query parameters
+      const params = new URLSearchParams();
+      params.append('connection_id', data.connectionId);
       
-      // Parse the data
-      const overall = parseOverallData(overallData);
-      const modules = parseModuleData(moduleData);
+      if (data.storyIds) {
+        params.append('story_ids', data.storyIds);
+      } else if (data.sprintName) {
+        params.append('sprint_name', data.sprintName);
+      }
       
-      const dashboardData: DashboardData = {
-        overall,
-        modules
-      };
+      // Fetch RTM report
+      const response = await fetch(`${VITE_API_URL}/rtm-report?${params.toString()}`);
       
+      if (!response.ok) {
+        throw new Error('Failed to generate RTM report');
+      }
+      
+      const rtmReportData = await response.json();
+      setRtmData(rtmReportData);
+      
+      // Transform RTM data to dashboard format
+      const dashboardData = transformRTMToDashboard(rtmReportData);
       setDashboardData(dashboardData);
+      
     } catch (err: any) {
-      setError(err.message || "Failed to fetch data from spreadsheet. Please check your URL and ranges.");
+      setError(err.message || "Failed to generate RTM report. Please check your connection and try again.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    if (!reportParams) return;
+    
+    setIsDownloading(true);
+    setError(null);
+    
+    try {
+      // Build query parameters using the same params from report generation
+      const params = new URLSearchParams();
+      params.append('connection_id', reportParams.connectionId);
+      
+      if (reportParams.storyIds) {
+        params.append('story_ids', reportParams.storyIds);
+      } else if (reportParams.sprintName) {
+        params.append('sprint_name', reportParams.sprintName);
+      }
+      
+      // Add optional filename parameter
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      const filename = `RTM_Report_${timestamp}`;
+      params.append('filename', filename);
+      
+      // Fetch the Excel file
+      const response = await fetch(`${VITE_API_URL}/rtm-report/download?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to download RTM report');
+      }
+      
+      // Get the blob data
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Try to get filename from response headers, fallback to default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let downloadFilename = `${filename}.xlsx`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          downloadFilename = filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
+      
+      link.download = downloadFilename;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+    } catch (err: any) {
+      setError(err.message || "Failed to download report");
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -173,13 +192,13 @@ const Index = () => {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <FileSpreadsheet className="h-8 w-8 text-primary" />
+              <Database className="h-8 w-8 text-primary" />
               <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                 QA Test Coverage Dashboard
               </h1>
             </div>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Visualize your test coverage data from Google Sheets with comprehensive analytics 
+              Generate Requirements Traceability Matrix reports from Azure DevOps with comprehensive analytics 
               and interactive charts for both overall and module-wise insights.
             </p>
           </div>
@@ -188,11 +207,11 @@ const Index = () => {
             <CardHeader className="text-center">
               <CardTitle className="flex items-center justify-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Connect Your Spreadsheet
+                Connect to Azure DevOps
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <SpreadsheetForm onSubmit={handleDataFetch} isLoading={isLoading} error={error} />
+              <ConnectionForm onSubmit={handleRTMGeneration} isLoading={isLoading} error={error} />
             </CardContent>
           </Card>
 
@@ -234,20 +253,45 @@ const Index = () => {
             <div>
               <h1 className="text-3xl font-bold mb-2">QA Test Coverage Dashboard</h1>
               <div className="flex items-center gap-2">
-                <Badge variant="secondary">Live Data</Badge>
+                <Badge variant="secondary">RTM Report</Badge>
                 <span className="text-sm text-muted-foreground">
-                  Last updated: {new Date().toLocaleString()}
+                  Generated: {new Date().toLocaleString()}
                 </span>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={() => setDashboardData(null)}
-              className="gap-2"
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              Change Source
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleDownloadReport}
+                disabled={isDownloading || !reportParams}
+                className="gap-2"
+              >
+                {isDownloading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Download Report
+                  </>
+                )}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setDashboardData(null);
+                  setRtmData(null);
+                  setReportParams(null);
+                  setError(null);
+                }}
+                className="gap-2"
+              >
+                <Database className="h-4 w-4" />
+                New Report
+              </Button>
+            </div>
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
@@ -281,8 +325,8 @@ const Index = () => {
       <Card className="w-full max-w-md">
         <CardContent className="p-8 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Loading Dashboard</h3>
-          <p className="text-muted-foreground">Fetching data from your spreadsheet...</p>
+          <h3 className="text-lg font-semibold mb-2">Generating RTM Report</h3>
+          <p className="text-muted-foreground">Fetching data from Azure DevOps...</p>
         </CardContent>
       </Card>
     </div>
