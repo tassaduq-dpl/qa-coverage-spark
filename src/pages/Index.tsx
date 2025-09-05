@@ -103,7 +103,7 @@ const Index = () => {
       }
       
       // Fetch RTM report
-      const response = await fetch(`${VITE_API_URL}/rtm-report?${params.toString()}`);
+      const response = await fetch(`${VITE_API_URL}/rtm-download?${params.toString()}`);
       
       if (!response.ok) {
         throw new Error('Failed to generate RTM report');
