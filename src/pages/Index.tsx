@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,10 @@ import OverallCoverageSection from "@/components/dashboard/OverallCoverageSectio
 import ModuleCoverageSection from "@/components/dashboard/ModuleCoverageSection";
 
 interface DashboardData {
+  coverageTrend: Array<{
+    period: string;
+    coverage: number;
+  }>;
   overall: {
     totalModules: number
     totalCases: number;
@@ -48,13 +53,17 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  const [rtmData, setRtmData] = useState<RTMReportData | null>(null);
   const [reportParams, setReportParams] = useState<ReportParams | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Transform RTM data to dashboard format
   const transformRTMToDashboard = (rtmData: RTMReportData): DashboardData => {
-    const { overallCoverage, moduleWiseCoverage } = rtmData;
+    const { overallCoverage, moduleWiseCoverage, coverageTrend } = rtmData;
+
+    const coverageTrendData = (coverageTrend?.data || []).map((item: any) => ({
+      period: item.week,
+      coverage: item.coverage,
+    }));
     
     const overall = {
       totalModules: overallCoverage.totalModules,
@@ -80,7 +89,8 @@ const Index = () => {
 
     return {
       overall,
-      modules
+      modules,
+      coverageTrend: coverageTrendData,
     };
   };
 
@@ -95,6 +105,8 @@ const Index = () => {
       // Build query parameters
       const params = new URLSearchParams();
       params.append('connection_id', data.connectionId);
+      params.append('include_trend', 'true');
+      params.append('trend_weeks', '4');
       
       if (data.storyIds) {
         params.append('story_ids', data.storyIds);
@@ -110,7 +122,6 @@ const Index = () => {
       }
       
       const rtmReportData = await response.json();
-      setRtmData(rtmReportData);
       
       // Transform RTM data to dashboard format
       const dashboardData = transformRTMToDashboard(rtmReportData);
@@ -282,7 +293,6 @@ const Index = () => {
                 variant="outline" 
                 onClick={() => {
                   setDashboardData(null);
-                  setRtmData(null);
                   setReportParams(null);
                   setError(null);
                 }}
@@ -307,7 +317,7 @@ const Index = () => {
             </TabsList>
 
             <TabsContent value="overview">
-              <OverallCoverageSection data={dashboardData.overall} />
+              <OverallCoverageSection data={dashboardData.overall} trendData={dashboardData.coverageTrend} />
             </TabsContent>
 
             <TabsContent value="modules">

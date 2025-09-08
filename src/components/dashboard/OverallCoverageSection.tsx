@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -29,9 +30,13 @@ interface OverallCoverageData {
 
 interface OverallCoverageSectionProps {
   data: OverallCoverageData;
+  trendData?: Array<{
+    period: string;
+    coverage: number;
+  }>;
 }
 
-const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
+const OverallCoverageSection = ({ data, trendData }: OverallCoverageSectionProps) => {
   const pieData = [
     { name: "Positive", value: data.positiveCases, color: "hsl(var(--chart-1))" },
     { name: "Negative", value: data.negativeCases, color: "hsl(var(--chart-2))" },
@@ -39,19 +44,12 @@ const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
     { name: "Integration", value: data.integrationCases, color: "hsl(var(--chart-4))" },
   ];
 
-  // Mock trend data for demonstration
-  const trendData = [
-    { period: "Week 1", coverage: 65 },
-    { period: "Week 2", coverage: 72 },
-    { period: "Week 3", coverage: 78 },
-    { period: "Week 4", coverage: 84.4 },
-  ];
-
   const chartConfig = {
-    positive : { label: "Positive Cases", color: "hsl(var(--chart-1))" },
-    negative : { label: "Negative Cases", color: "hsl(var(--chart-2))" },
-    edge : { label: "Edge Cases", color: "hsl(var(--chart-3))" },
+    positive: { label: "Positive Cases", color: "hsl(var(--chart-1))" },
+    negative: { label: "Negative Cases", color: "hsl(var(--chart-2))" },
+    edge: { label: "Edge Cases", color: "hsl(var(--chart-3))" },
     integration: { label: "Integration Cases", color: "hsl(var(--chart-4))" },
+    coverage: { label: "Coverage", color: "hsl(var(--primary))" },
   };
 
   const getStatusColor = (percentage: number) => {
@@ -64,6 +62,50 @@ const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
     if (percentage >= 90) return <CheckCircle className="h-5 w-5 text-emerald-600" />;
     if (percentage >= 75) return <AlertCircle className="h-5 w-5 text-amber-600" />;
     return <XCircle className="h-5 w-5 text-red-600" />;
+  };
+
+  // Custom tooltip for pie chart
+  const CustomPieTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0];
+      return (
+        <div className="rounded-lg border bg-background p-2 shadow-sm">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                {data.name}
+              </span>
+              <span className="font-bold text-muted-foreground">
+                {data.value}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Custom tooltip for line chart
+  const CustomLineTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0];
+      return (
+        <div className="rounded-lg border bg-background p-2 shadow-sm">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                {label}
+              </span>
+              <span className="font-bold text-muted-foreground">
+                Coverage {data.value}%
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -155,7 +197,7 @@ const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip content={<CustomPieTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
             </ChartContainer>
@@ -185,20 +227,34 @@ const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
               </Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px]">
+          <CardContent className="p-0">
+            <ChartContainer config={chartConfig} >
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="period" />
-                  <YAxis domain={[0, 100]} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                <LineChart 
+                  data={trendData}
+                  margin={{ right: 25 }}
+                >
+                  <XAxis 
+                    dataKey="period" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis 
+                    domain={[0, 100]} 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => `${value}%`}
+                  />
+                  <ChartTooltip content={<CustomLineTooltip />} />
                   <Line 
                     type="monotone" 
                     dataKey="coverage" 
                     stroke="hsl(var(--primary))" 
                     strokeWidth={3}
                     dot={{ fill: "hsl(var(--primary))", strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, stroke: "hsl(var(--primary))", strokeWidth: 2 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -221,7 +277,7 @@ const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
               </div>
               <p className="text-2xl font-bold">{data.positiveCases}</p>
               <p className="text-sm text-muted-foreground">
-                {((data.positiveCases / data.totalCovered) * 100).toFixed(1)}% of total covered
+                {(((data.positiveCases / data.totalCovered) * 100) || 0).toFixed(1)}% of total covered
               </p>
             </div>
 
@@ -232,7 +288,7 @@ const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
               </div>
               <p className="text-2xl font-bold">{data.negativeCases}</p>
               <p className="text-sm text-muted-foreground">
-                {((data.negativeCases / data.totalCovered) * 100).toFixed(1)}% of total covered
+                {(((data.negativeCases / data.totalCovered) * 100) || 0).toFixed(1)}% of total covered
               </p>
             </div>
 
@@ -243,7 +299,7 @@ const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
               </div>
               <p className="text-2xl font-bold">{data.edgeCases}</p>
               <p className="text-sm text-muted-foreground">
-                {((data.edgeCases / data.totalCovered) * 100).toFixed(1)}% of total of covered
+                {(((data.edgeCases / data.totalCovered) * 100) || 0).toFixed(1)}% of total covered
               </p>
             </div>
 
@@ -254,7 +310,7 @@ const OverallCoverageSection = ({ data }: OverallCoverageSectionProps) => {
               </div>
               <p className="text-2xl font-bold">{data.integrationCases}</p>
               <p className="text-sm text-muted-foreground">
-                {((data.integrationCases / data.totalCovered) * 100).toFixed(1)}% of total covered
+                {(((data.integrationCases / data.totalCovered) * 100) || 0).toFixed(1)}% of total covered
               </p>
             </div>
           </div>
